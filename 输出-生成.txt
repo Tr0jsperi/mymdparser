@@ -1,0 +1,7 @@
+﻿1>------ 已启动生成: 项目: my markdown parser, 配置: Debug Win32 ------
+1>md_parser.cpp
+1>c:\users\troy\source\repos\cpp-primer\my markdown parser\my markdown parser\md_parser.cpp : warning C4819: 该文件包含不能在当前代码页(936)中表示的字符。请将该文件保存为 Unicode 格式以防止数据丢失
+1>my markdown parser.vcxproj -> C:\Users\troy\Source\Repos\Cpp-Primer\my markdown parser\Debug\my markdown parser.exe
+1>my markdown parser.vcxproj -> C:\Users\troy\Source\Repos\Cpp-Primer\my markdown parser\Debug\my markdown parser.pdb (Partial PDB)
+1>已完成生成项目“my markdown parser.vcxproj”的操作。
+========== 生成: 成功 1 个，失败 0 个，最新 0 个，跳过 0 个 ==========
