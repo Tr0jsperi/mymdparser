@@ -41,7 +41,7 @@ int main() {
 	//写入html文件
 	std::ofstream out;
 	out.open("E:\\index.html");
-	out << head + contents + end;
+	out << head +'\n'+contents + '\n' + end;
 	out.close();
 
 	//计时结束，输出时间

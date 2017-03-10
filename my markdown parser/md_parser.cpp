@@ -52,7 +52,8 @@ std::string MdParser::GetContents()
 		}
 		auto vit = totalstring.begin();//定位首行
 		process_code(vit, totalstring);
-		process_escape(vit, totalstring, charqueue);
+		process_escape(vit, totalstring);
+		process_linebreak(vit, totalstring);
 		for (auto ptr = totalstring.begin(); ptr != totalstring.end(); ptr++)
 		{
 			html_outfile += (*ptr) + '\n';
@@ -61,7 +62,49 @@ std::string MdParser::GetContents()
 	}
 	return html_outfile;
 }
-//code
+
+//spcial symbol
+//处理特殊字符
+void MdParser::process_spc_sym(std::vector<std::string>::iterator & viter, std::vector<std::string>& totalstr)
+{
+
+	std::string spc_sym = "&<>";//存储特殊符号，防止html文件产生错误
+	std::vector<std::string>::iterator initialviter = viter;
+	if (viter == totalstr.end())
+	{
+		return;
+	}
+	for (; viter != totalstr.end(); viter++)
+	{
+		std::string::iterator in_viter = (*viter).begin();
+		for (std::string::iterator in_viter = (*viter).begin(); in_viter != (*viter).end();in_viter++)
+		{
+			if (spc_sym.find(*(in_viter)) != std::string::npos)
+			{
+				auto position = in_viter - (*viter).begin();
+				switch (*in_viter)
+				{
+				case '&':
+				{
+					(*viter).replace(in_viter, in_viter + 1, "&amp");
+					in_viter = (*viter).begin() + position + 4;
+					break;
+				}
+				case '<':
+				{
+					(*viter).replace(in_viter, in_viter + 1, "&lt");
+					in_viter = (*viter).begin() + position + 4;
+					break;
+				}
+				}
+				if (in_viter == (*viter).end()) break;
+			}
+		}
+	}	
+}
+
+
+//code  包含3个函数
 //处理代码块和行内代码
 void MdParser::process_code(std::vector<std::string>::iterator & viter, std::vector<std::string>& totalstr)
 {
@@ -162,7 +205,6 @@ void MdParser::process_code(std::vector<std::string>::iterator & viter, std::vec
 	}
 	viter = initialviter;
 }
-
 //标记每行<code>标签起始位置
 void MdParser::process_code_marker(std::vector<std::string>::iterator & viter, std::queue<std::size_t>& q_code_pos, std::queue<std::size_t>& q_code_end)
 {
@@ -176,7 +218,6 @@ void MdParser::process_code_marker(std::vector<std::string>::iterator & viter, s
 		q_code_end.push(code_end_pos);
 	}
 }
-
 //跳过行内代码
 void MdParser::process_inlinecode_skip(std::vector<std::string>::iterator& viter, std::string::iterator& in_viter, std::queue<std::size_t>& q_code_pos, std::queue<std::size_t>& q_code_end)
 {
@@ -189,14 +230,9 @@ void MdParser::process_inlinecode_skip(std::vector<std::string>::iterator& viter
 }
 
 
-
-
-
-
 //escape
-//处理转义字符，基于windows
-//提取转义字符入charqueue保存，只保留符号'/'作为位置标记
-void MdParser::process_escape(std::vector<std::string>::iterator & viter, std::vector<std::string> & totalstr, std::queue<char>& charqueue)
+//在转义字符周围加上"<escape></escape>"标签;
+void MdParser::process_escape(std::vector<std::string>::iterator & viter, std::vector<std::string> & totalstr)
 {
 	std::vector<std::string>::iterator initialviter = viter;
 	std::string escape = "\\`*_{}[]()#+-.!";//存储转义字符，双斜杠避免将'\'错认为转义标志
@@ -262,3 +298,59 @@ void MdParser::process_escape(std::vector<std::string>::iterator & viter, std::v
 	viter = initialviter;
 }
 
+//linebreak
+//行末两空格换行
+void MdParser::process_linebreak(std::vector<std::string>::iterator&viter, std::vector<std::string>&totalstr)
+{
+	std::vector<std::string>::iterator initialviter = viter;
+	if (viter == totalstr.end())
+	{
+		return;
+	}
+	for (; viter != totalstr.end();viter++)
+	{
+		if ((*viter).empty())
+		{
+			continue;
+		}
+		if ((*viter).size() >= 10 && !((*viter).compare(0, 10, "<pre><code")))//跳过代码段
+		{
+			while (viter != totalstr.end() && ((*viter).size() < 13 || (*viter).compare(0, 13, "</code></pre>")))
+			{
+				viter++;
+			}
+			if (viter == totalstr.end() - 1)
+			{
+				break;//如果停在最后一行，结束处理
+			}
+			else
+			{
+				viter++;
+			}//结束后viter指向</code>行下一行
+		}
+		else
+		{
+			std::string::iterator in_viter = (*viter).end() - 1;
+			if ((*viter).size() > 1 && *(in_viter) == ' '&&*(in_viter - 1) == ' ')
+			{
+				*viter = *viter + "<br>";
+			}
+		}
+	}
+	viter = initialviter;
+}
+
+//list
+//修改列表，共 个函数
+void MdParser::process_list(std::vector<std::string>::iterator & viter, std::vector<std::string> & totalstr)
+{
+	std::vector<std::string>::iterator initialviter = viter;
+	if (viter == totalstr.end())
+	{
+		return;
+	}
+	for (; viter != totalstr.end(); viter++)
+	{
+
+	}
+}
