@@ -104,7 +104,7 @@ void MdParser::process_spc_sym(std::vector<std::string>::iterator & viter, std::
 }
 
 
-//code  包含3个函数
+//code 
 //处理代码块和行内代码
 void MdParser::process_code(std::vector<std::string>::iterator & viter, std::vector<std::string>& totalstr)
 {
