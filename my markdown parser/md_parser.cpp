@@ -52,8 +52,7 @@ std::string MdParser::GetContents()
 		}
 		auto vit = totalstring.begin();//定位首行
 		process_code(vit, totalstring);
-		//process_escape_first(vit, totalstring, charqueue);
-		//process_escape_last(vit, totalstring, charqueue);
+		process_escape(vit, totalstring, charqueue);
 		for (auto ptr = totalstring.begin(); ptr != totalstring.end(); ptr++)
 		{
 			html_outfile += (*ptr) + '\n';
@@ -164,12 +163,43 @@ void MdParser::process_code(std::vector<std::string>::iterator & viter, std::vec
 	viter = initialviter;
 }
 
+//标记每行<code>标签起始位置
+void MdParser::process_code_marker(std::vector<std::string>::iterator & viter, std::queue<std::size_t>& q_code_pos, std::queue<std::size_t>& q_code_end)
+{
+	std::size_t code_pos = 0, code_end_pos = 0;
+	while ((*viter).find("<code>", code_pos) != std::string::npos)
+	{
+		code_pos = (*viter).find("<code>", code_pos);
+		q_code_pos.push(code_pos);
+		code_pos++;
+		code_end_pos = (*viter).find("</code>", code_pos);
+		q_code_end.push(code_end_pos);
+	}
+}
+
+//跳过行内代码
+void MdParser::process_inlinecode_skip(std::vector<std::string>::iterator& viter, std::string::iterator& in_viter, std::queue<std::size_t>& q_code_pos, std::queue<std::size_t>& q_code_end)
+{
+	if (!q_code_pos.empty() && in_viter - (*viter).begin() == q_code_pos.front())
+	{
+		in_viter = (*viter).begin() + q_code_end.front() + 6;
+		q_code_pos.pop();
+		q_code_end.pop();
+	}
+}
+
+
+
+
+
+
 //escape
 //处理转义字符，基于windows
 //提取转义字符入charqueue保存，只保留符号'/'作为位置标记
-void MdParser::process_escape_first(std::vector<std::string>::iterator & viter, std::vector<std::string> & totalstr, std::queue<char>& charqueue)
+void MdParser::process_escape(std::vector<std::string>::iterator & viter, std::vector<std::string> & totalstr, std::queue<char>& charqueue)
 {
 	std::vector<std::string>::iterator initialviter = viter;
+	std::string escape = "\\`*_{}[]()#+-.!";//存储转义字符，双斜杠避免将'\'错认为转义标志
 	if (viter == totalstr.end())
 	{
 		return;
@@ -179,26 +209,49 @@ void MdParser::process_escape_first(std::vector<std::string>::iterator & viter, 
 		if ((*viter).empty()) continue;
 		if ((*viter).size() >= 10 && !((*viter).compare(0, 10, "<pre><code")))//跳过代码段
 		{
-			while (viter != totalstr.end()&&((*viter).size() < 13||(*viter).compare(0, 13, "</code></pre>")))
+			while (viter != totalstr.end() && ((*viter).size() < 13 || (*viter).compare(0, 13, "</code></pre>")))
 			{
 				viter++;
 			}
+			if (viter == totalstr.end() - 1)
+			{
+				break;//如果停在最后一行，结束处理
+			}
+			else
+			{
+				viter++;
+			}
+			//结束后viter指向</code>行下一行
 		}
+		if ((*viter).find("<code>") != std::string::npos)
+		{
+			process_code_marker(viter, q_code_pos, q_code_end);//向队列添加<code>起始标志位置，以便后续处理
+		}		
 		for (std::string::iterator in_viter = (*viter).begin(); in_viter != (*viter).end();)
 		{				
-			auto code_pos = (*viter).find("<code>");//标记<code>标识符位置
-			if (code_pos!=std::string::npos && in_viter - (*viter).begin() == code_pos)
+			//跳过行内代码
+			process_inlinecode_skip(viter, in_viter, q_code_pos, q_code_end);
+			//处理转义字符
+			if((*in_viter) == '\\' && in_viter != ((*viter).end() - 1))//防止行末'\'符号导致之后+1迭代器错误
 			{
-				auto code_end_pos = (*viter).find("</code>");
-				in_viter = in_viter + code_end_pos - code_pos + 6;
-			}
-			if((*in_viter) == '\\'&&in_viter != ((*viter).end() - 1))//防止行末'\'符号导致之后+1迭代器错误
-			{
-				charqueue.push(*(in_viter + 1));
-				in_viter++;
-				int position = in_viter - (*viter).begin();
-				(*viter).erase(in_viter);
-				in_viter = (*viter).begin() + position;
+				auto es_in = escape.find(*(in_viter+1));
+				if (es_in != std::string::npos)
+				{
+					std::string es_mk1 = "<escape>";
+					std::string es_mk2 = "</escape>";
+					auto position = in_viter - (*viter).begin();
+					(*viter).insert(in_viter, es_mk1.begin(), es_mk1.end());
+					in_viter = (*viter).begin() + position + es_mk1.size();
+					(*viter).erase(in_viter);
+					in_viter = (*viter).begin() + position + es_mk1.size() + 1;
+					position = in_viter - (*viter).begin();
+					(*viter).insert(in_viter, es_mk2.begin(), es_mk2.end());
+					in_viter = (*viter).begin() + position + es_mk2.size();
+				}
+				else
+				{
+					in_viter++;
+				}
 			}
 			else
 			{
@@ -208,36 +261,4 @@ void MdParser::process_escape_first(std::vector<std::string>::iterator & viter, 
 	}
 	viter = initialviter;
 }
-
-//恢复被删除的转义字符，替换原位置标记'/'为其后的字符
-void MdParser::process_escape_last(std::vector<std::string>::iterator & viter, std::vector<std::string> & totalstr, std::queue<char>& charqueue)
-{
-	std::vector<std::string>::iterator initialviter = viter;
-	if (viter == totalstr.end())
-	{
-		return;
-	}
-	for (; viter != totalstr.end(); viter++)
-	{
-		if ((*viter).empty()) continue;
-		if ((*viter).size() >= 10 && !((*viter).compare(0, 10, "<pre><code")))//跳过代码段
-		{
-			while (viter != totalstr.end() && ((*viter).size() < 13 || (*viter).compare(0, 13, "</code></pre>")))
-			{
-				viter++;
-			}
-		}
-		for (std::string::iterator in_viter = (*viter).begin(); in_viter != (*viter).end();in_viter++)
-		{
-			if (*in_viter == '\\'&&!charqueue.empty())
-			{
-				*in_viter=charqueue.front();
-				charqueue.pop();
-			}
-		}
-	}
-	viter = initialviter;
-}
-
-
 

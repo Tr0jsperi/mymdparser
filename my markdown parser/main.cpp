@@ -47,6 +47,6 @@ int main() {
 	//计时结束，输出时间
 	time_end = clock();
 	double exe_time = (double)(time_end - time_start) / CLOCKS_PER_SEC;
-	std::cout << "解析完成，共耗时" << exe_time << "s";	
+	std::cout << "解析完成，共耗时" << exe_time << "s"<<'\n';	
 	return 0;
 }
