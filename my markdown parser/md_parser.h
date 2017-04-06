@@ -14,6 +14,7 @@ public:
 	void process_inlinecode_skip(std::vector<std::string>::iterator& , std::string::iterator& , std::queue<std::size_t>& , std::queue<std::size_t>& );
 	void process_linebreak(std::vector<std::string>::iterator&, std::vector<std::string>&);
 	void process_list(std::vector<std::string>::iterator &, std::vector<std::string> &);
+	void process_title(std::vector<std::string>::iterator &, std::vector<std::string> &);
 	
 private:
 	std::string file_position;

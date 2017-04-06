@@ -54,6 +54,7 @@ std::string MdParser::GetContents()
 		process_code(vit, totalstring);
 		process_escape(vit, totalstring);
 		process_linebreak(vit, totalstring);
+		process_title(vit, totalstring);
 		for (auto ptr = totalstring.begin(); ptr != totalstring.end(); ptr++)
 		{
 			html_outfile += (*ptr) + '\n';
@@ -64,7 +65,7 @@ std::string MdParser::GetContents()
 }
 
 //spcial symbol
-//处理特殊字符
+//处理特殊字符  还没找到好办法规避html及code中无需转义的字符  暂时不启用
 void MdParser::process_spc_sym(std::vector<std::string>::iterator & viter, std::vector<std::string>& totalstr)
 {
 
@@ -352,5 +353,71 @@ void MdParser::process_list(std::vector<std::string>::iterator & viter, std::vec
 	for (; viter != totalstr.end(); viter++)
 	{
 
+	}
+}
+
+//处理标题和引用
+void MdParser::process_title(std::vector<std::string>::iterator & viter, std::vector<std::string> & totalstr)
+{
+	std::vector<std::string>::iterator initialviter = viter;
+	if (viter == totalstr.end()) return;
+
+	//处理标题	
+	for (; viter != totalstr.end();viter++)
+	{
+		if ((*viter).empty()) continue;
+		if ((*((*viter).begin())) == '#')
+		{
+			int hash = 0;
+			std::string temp_str = (*viter);
+			while ((!temp_str.empty())&&(*(temp_str.begin())) == '#')
+			{
+				hash++;
+				(temp_str).erase(temp_str.begin());
+			}
+			while ((!temp_str.empty()) && (*(temp_str.end()-1)) == '#')
+			{
+				(temp_str).erase(temp_str.end() - 1);
+			}
+			if (hash > 6) hash = 6;
+			//整型转string
+			std::stringstream ss;
+			ss << hash;
+			std::string hnum='h'+ss.str();
+			(*viter) = '<' + hnum + '>' + temp_str + "</" + hnum + '>';
+		}
+		if ((*((*viter).begin())) == '>')
+		{
+			std::string temp_str = (*viter);
+			std::string::iterator temp_in_viter = (temp_str).begin();
+			std::string quo_sym = "";
+			while ((!temp_str.empty()) && (*(temp_str.begin()) == '>'))
+			{
+				quo_sym += '>';
+				(temp_str).erase(temp_str.begin());
+			}
+			int hash = 0;
+			while ((!temp_str.empty()) && (*(temp_str.begin())) == '#')
+			{
+				hash++;
+				(temp_str).erase(temp_str.begin());
+			}
+			while ((!temp_str.empty()) && (*(temp_str.end() - 1)) == '#')
+			{
+				(temp_str).erase(temp_str.end() - 1);
+			}
+			if (hash > 6)
+			{
+				hash = 6;
+			}
+			if (hash > 0)
+			{
+				//整型转string
+				std::stringstream ss;
+				ss << hash;
+				std::string hnum = 'h' + ss.str();
+				(*viter) = quo_sym+'<' + hnum + '>' + temp_str + "</" + hnum + '>';
+			}			
+		}
 	}
 }
