@@ -273,8 +273,8 @@ void MdParser::process_escape(std::vector<std::string>::iterator & viter, std::v
 				auto es_in = escape.find(*(in_viter+1));
 				if (es_in != std::string::npos)
 				{
-					std::string es_mk1 = "<escape>";
-					std::string es_mk2 = "</escape>";
+					std::string es_mk1 = "";// "<escape>";
+					std::string es_mk2 = "";//"</escape>";
 					auto position = in_viter - (*viter).begin();
 					(*viter).insert(in_viter, es_mk1.begin(), es_mk1.end());
 					in_viter = (*viter).begin() + position + es_mk1.size();
@@ -311,7 +311,7 @@ void MdParser::process_linebreak(std::vector<std::string>::iterator&viter, std::
 	{
 		if ((*viter).empty())
 		{
-			continue;
+			*viter = *viter + "<br>";
 		}
 		if ((*viter).size() >= 10 && !((*viter).compare(0, 10, "<pre><code")))//跳过代码段
 		{

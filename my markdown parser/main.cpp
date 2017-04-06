@@ -20,14 +20,15 @@ int main() {
 	std::string contents = test_parser.GetContents();
 	
 	//html文件头尾信息
-	/*<link href=\"http://github.com/yrgoldteeth/darkdowncss/raw/master/darkdown.css\" rel=\"stylesheet\"></link>\n\*/
+	/*<link rel=\"stylesheet\" href=\"my-markdown.css\">\n\*/
 	std::string head = "<!DOCTYPE html>\n\
 </link><html>\n\
 <head>\n\
 <meta charset=\"utf-8\">\n\
 <title>Markdown</title>\n\
-<link rel=\"stylesheet\" href=\"my-markdown.css\">\n\
+<link href=\"https://raw.githubusercontent.com/troywmz/modest/master/css/modest.css\" rel=\"stylesheet\"></link>\n\
 <link href=\"http://cdn.bootcss.com/highlight.js/9.0.0/styles/monokai_sublime.min.css\" rel=\"stylesheet\">\n\
+<script type =\"text/javascript\" src=\"http://cdn.mathjax.org/mathjax/latest/MathJax.js?config=default\"></script>\n\
 </head>\n\
 <body>\n\
 <article class=\"markdown-body\">";
