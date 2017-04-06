@@ -402,10 +402,6 @@ void MdParser::process_title(std::vector<std::string>::iterator & viter, std::ve
 				hash++;
 				(temp_str).erase(temp_str.begin());
 			}
-			while ((!temp_str.empty()) && (*(temp_str.end() - 1)) == '#')
-			{
-				(temp_str).erase(temp_str.end() - 1);
-			}
 			if (hash > 6)
 			{
 				hash = 6;
