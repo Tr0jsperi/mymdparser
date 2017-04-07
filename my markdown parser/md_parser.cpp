@@ -17,6 +17,13 @@ MdParser::~MdParser()//析构函数
 {
 }
 
+std::string MdParser::char_to_str(char ch)
+{
+	std::stringstream ss;
+	ss << ch;
+	std::string str = ss.str();
+	return str;
+}
 std::string MdParser::GetContents()
 {
 	std::string html_outfile = "";//定义输出html文件
@@ -35,7 +42,7 @@ std::string MdParser::GetContents()
 	{
 		//计算文件大小
 		md_infile.seekg(0, std::ios::end);//取文件指针到文件流末尾
-		int length = md_infile.tellg();//返回取文件指针在文件流中的位置
+		auto length = md_infile.tellg();//返回取文件指针在文件流中的位置
 		md_infile.seekg(0, std::ios::beg);//指针复位
 
 		//导入成功提示
@@ -52,9 +59,10 @@ std::string MdParser::GetContents()
 		}
 		auto vit = totalstring.begin();//定位首行
 		process_code(vit, totalstring);
-		process_escape(vit, totalstring);
-		process_linebreak(vit, totalstring);
+		process_escape_first(vit, totalstring,charqueue);		
 		process_title(vit, totalstring);
+		process_linebreak(vit, totalstring);
+		process_escape_last(vit, totalstring, charqueue);
 		for (auto ptr = totalstring.begin(); ptr != totalstring.end(); ptr++)
 		{
 			html_outfile += (*ptr) + '\n';
@@ -143,7 +151,7 @@ void MdParser::process_code(std::vector<std::string>::iterator & viter, std::vec
 			}
 			if (sec_viter == totalstr.end())
 			{
-				int linenum = viter - initialviter + 1;
+				auto linenum = viter - initialviter + 1;
 				std::cout << "出现奇数代码块标记"<<'\n'<<"未匹配代码块标记位于第"<<linenum<<"行"<<'\n';				
 				*viter = codemark;
 			}
@@ -163,7 +171,7 @@ void MdParser::process_code(std::vector<std::string>::iterator & viter, std::vec
 			if (bs_counter % 2 == 1)
 			{
 				bs_counter--;//减去多余的'`'号避免判断<code>首尾时出错
-				int linenum = viter - initialviter+1;
+				auto linenum = viter - initialviter+1;
 				std::cout << "第" << linenum << "行存在奇数个反引号，请检查后修正。问题行已在转换文件行首注明"<<'\n';
 				newstr=u8"<error>本行有奇数个反引号错误，请检查后修正</error>";
 			}
@@ -232,8 +240,8 @@ void MdParser::process_inlinecode_skip(std::vector<std::string>::iterator& viter
 
 
 //escape
-//在转义字符周围加上"<escape></escape>"标签;
-void MdParser::process_escape(std::vector<std::string>::iterator & viter, std::vector<std::string> & totalstr)
+//提取转义字符暂存，原处用<escape>标记
+void MdParser::process_escape_first(std::vector<std::string>::iterator & viter, std::vector<std::string> & totalstr, std::queue<char>& charqueue)
 {
 	std::vector<std::string>::iterator initialviter = viter;
 	std::string escape = "\\`*_{}[]()#+-.!";//存储转义字符，双斜杠避免将'\'错认为转义标志
@@ -263,17 +271,24 @@ void MdParser::process_escape(std::vector<std::string>::iterator & viter, std::v
 		if ((*viter).find("<code>") != std::string::npos)
 		{
 			process_code_marker(viter, q_code_pos, q_code_end);//向队列添加<code>起始标志位置，以便后续处理
-		}		
+		}	
 		for (std::string::iterator in_viter = (*viter).begin(); in_viter != (*viter).end();)
 		{				
-			//跳过行内代码
+			//判别是否到达行内代码标记，跳过行内代码
 			process_inlinecode_skip(viter, in_viter, q_code_pos, q_code_end);
 			//处理转义字符
 			if((*in_viter) == '\\' && in_viter != ((*viter).end() - 1))//防止行末'\'符号导致之后+1迭代器错误
 			{
-				auto es_in = escape.find(*(in_viter+1));
-				if (es_in != std::string::npos)
+				auto es_in = escape.find(*(in_viter + 1));
+				if (es_in != std::string::npos)//判断反斜杠后字符是否属于转义字符
 				{
+					
+					charqueue.push(*(in_viter + 1));
+					auto pos = in_viter - (*viter).begin();
+					*viter = (*viter).replace(in_viter,in_viter+2, "<escape>");
+					in_viter = (*viter).begin() + pos + 8;
+					//in_viter ++;
+					/*
 					std::string es_mk1 = "";// "<escape>";
 					std::string es_mk2 = "";//"</escape>";
 					auto position = in_viter - (*viter).begin();
@@ -284,20 +299,43 @@ void MdParser::process_escape(std::vector<std::string>::iterator & viter, std::v
 					position = in_viter - (*viter).begin();
 					(*viter).insert(in_viter, es_mk2.begin(), es_mk2.end());
 					in_viter = (*viter).begin() + position + es_mk2.size();
+					*/
 				}
 				else
 				{
 					in_viter++;
 				}
+				
 			}
 			else
 			{
 				in_viter++;
 			}
+		}		
+	}
+	viter = initialviter;
+}
+
+
+//归还转义字符
+void MdParser::process_escape_last(std::vector<std::string>::iterator & viter, std::vector<std::string> & totalstr, std::queue<char>& charqueue)
+{
+	std::vector<std::string>::iterator initialviter = viter;
+	if (viter == totalstr.end()) return;
+	for (; viter != totalstr.end(); viter++)
+	{
+		if ((*viter).empty()) continue;
+		auto pos = (*viter).find("<escape>");
+		while(pos!=(*viter).end()-(*viter).begin()&&pos!= (*viter).npos)
+		{
+			(*viter) = (*viter).replace(pos, 8, char_to_str(charqueue.front()));
+			charqueue.pop();
+			pos = (*viter).find("<escape>", pos+1);
 		}
 	}
 	viter = initialviter;
 }
+
 
 //linebreak
 //行末两空格换行
@@ -402,6 +440,10 @@ void MdParser::process_title(std::vector<std::string>::iterator & viter, std::ve
 				hash++;
 				(temp_str).erase(temp_str.begin());
 			}
+			while ((!temp_str.empty()) && (*(temp_str.end() - 1)) == '#')
+			{
+				(temp_str).erase(temp_str.end() - 1);
+			}
 			if (hash > 6)
 			{
 				hash = 6;
@@ -416,4 +458,5 @@ void MdParser::process_title(std::vector<std::string>::iterator & viter, std::ve
 			}			
 		}
 	}
+	viter = initialviter;
 }
