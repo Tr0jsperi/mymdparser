@@ -14,7 +14,7 @@ public:
 	void process_linebreak(std::vector<std::string>::iterator&, std::vector<std::string>&);
 	void process_list(std::vector<std::string>::iterator &, std::vector<std::string> &);
 	void process_title(std::vector<std::string>::iterator &, std::vector<std::string> &);
-	
+	void process_refer(std::vector<std::string>::iterator &, std::vector<std::string> &);
 	
 private:
 	std::string file_position;
@@ -22,7 +22,8 @@ private:
 
 	void process_code_marker(std::vector<std::string>::iterator &, std::queue<std::size_t>&, std::queue<std::size_t>&);
 	void process_inlinecode_skip(std::vector<std::string>::iterator&, std::string::iterator&, std::queue<std::size_t>&, std::queue<std::size_t>&);
-	std::string char_to_str(char);
+	std::string trans_str(char);
+	std::string trans_str(int);
 };
 
 #endif
